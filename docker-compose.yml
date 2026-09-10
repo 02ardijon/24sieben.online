@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-sieben}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD muss in .env gesetzt sein}"
+      POSTGRES_DB: "${POSTGRES_DB:-sieben}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sieben} -d ${POSTGRES_DB:-sieben}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-sieben}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sieben}?schema=public"
+      AUTH_SECRET: "${AUTH_SECRET:?AUTH_SECRET muss in .env gesetzt sein, z.B. mit \"openssl rand -base64 32\"}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL:?NEXTAUTH_URL muss in .env gesetzt sein (oeffentliche URL der App)}"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_SECURE: "${SMTP_SECURE:-false}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/app/uploads
+
+volumes:
+  postgres_data:
+  uploads:

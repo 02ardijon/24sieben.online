@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 24sieben.online
 
-## Getting Started
+Business-Website mit Kundenportal für das Einzelunternehmen 24sieben.online
+(Ardijon Durguti, Bremen) — Erstellung und Erhaltung von Webseiten und
+individuellen Webservices.
 
-First, run the development server:
+Öffentlicher Bereich (Leistungen, Über mich, Portfolio, Kontakt) +
+geschütztes Kundenportal (Auftragsstatus, Support-Tickets) +
+Admin-/Agenten-Bereich für den Betreiber.
+
+## Stack
+
+- Next.js 16 (App Router), TypeScript, Tailwind CSS 4
+- Prisma 7 + PostgreSQL (`@prisma/adapter-pg`)
+- Auth.js (NextAuth v5, Credentials Provider, JWT-Sessions)
+- Docker + docker-compose für Self-Hosting
+
+## Lokale Entwicklung
+
+Voraussetzungen: Node.js 20.9+, eine erreichbare PostgreSQL-Instanz.
 
 ```bash
+npm install
+cp .env.example .env   # DATABASE_URL, AUTH_SECRET etc. anpassen
+npx prisma migrate dev
+npm run db:seed        # legt Admin-Account aus SEED_ADMIN_EMAIL/PASSWORD an
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Für Demo-Daten (Beispielkunde + Beispielauftrag) zusätzlich
+`SEED_DEMO_DATA=true` vor `npm run db:seed` setzen.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment (Docker / VPS)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cp .env.example .env
+# POSTGRES_PASSWORD, AUTH_SECRET (openssl rand -base64 32), NEXTAUTH_URL
+# setzen — DATABASE_URL wird für den Container automatisch aus den
+# POSTGRES_*-Variablen zusammengesetzt.
 
-## Learn More
+docker compose up --build -d
+docker compose exec app npm run db:seed   # einmalig: Admin-Account anlegen
+```
 
-To learn more about Next.js, take a look at the following resources:
+Datenbank-Migrationen laufen automatisch bei jedem Container-Start
+(`docker-entrypoint.sh` → `prisma migrate deploy`). Hochgeladene
+Ticket-/Auftrags-Anhänge liegen im benannten Volume `uploads`, die
+Postgres-Daten im Volume `postgres_data` — beide überstehen
+`docker compose down` (nicht `down -v`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Reverse Proxy / TLS (z.B. nginx + Let's Encrypt, oder Caddy) ist nicht
+Teil dieses Setups und muss auf dem VPS separat vor Port 3000 gesetzt
+werden.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Rollen
 
-## Deploy on Vercel
+- **CUSTOMER** — Kundenportal (`/portal`): eigene Aufträge, Tickets
+- **AGENT** / **ADMIN** — Admin-Bereich (`/admin`): alle Kunden, Aufträge,
+  Tickets verwalten. Aktuell gibt es praktisch nur die Rolle ADMIN (der
+  Betreiber); AGENT existiert im Datenmodell für eine spätere Erweiterung
+  um weitere Mitarbeiter.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Wichtige Hinweise vor Live-Schaltung
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/impressum` und `/datenschutz` enthalten Platzhalter (fehlende
+  Anschrift, USt-IdNr.) — vor Veröffentlichung ergänzen und rechtlich
+  prüfen lassen.
+- SMTP für den Passwort-Reset-Versand konfigurieren (`SMTP_*`-Variablen);
+  ohne SMTP-Konfiguration werden Reset-Links nur in die Server-Logs
+  geschrieben.
