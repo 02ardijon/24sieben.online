@@ -6,7 +6,8 @@ RUN apk add --no-cache libc6-compat openssl
 # ---- Dependencies ------------------------------------------------
 FROM base AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json prisma.config.ts ./
+COPY prisma ./prisma
 RUN npm ci
 
 # ---- Build ---------------------------------------------------------
@@ -36,8 +37,7 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
-RUN mkdir -p uploads \
-  && chmod +x docker-entrypoint.sh \
+RUN chmod +x docker-entrypoint.sh \
   && chown -R nextjs:nodejs /app
 
 USER nextjs

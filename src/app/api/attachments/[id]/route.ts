@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { readFile } from "node:fs/promises";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { resolveUploadPath } from "@/lib/uploads";
+import { getUploadedFile } from "@/lib/uploads";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -38,8 +37,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   try {
-    const data = await readFile(resolveUploadPath(attachment.url));
-    return new NextResponse(new Uint8Array(data), {
+    const stream = await getUploadedFile(attachment.url);
+    return new NextResponse(stream, {
       headers: {
         "Content-Type": attachment.mimeType,
         "Content-Disposition": `inline; filename="${encodeURIComponent(attachment.filename)}"`,

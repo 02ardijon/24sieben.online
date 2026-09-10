@@ -48,6 +48,3 @@ next-env.d.ts
 /.claude/skills
 /.windsurf/skills
 skills-lock.json
-
-# uploaded attachments (local dev / docker volume)
-/uploads

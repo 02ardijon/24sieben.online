@@ -30,11 +30,12 @@ services:
       SMTP_USER: "${SMTP_USER:-}"
       SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
       SMTP_FROM: "${SMTP_FROM:-}"
+      R2_ACCOUNT_ID: "${R2_ACCOUNT_ID:?R2_ACCOUNT_ID muss in .env gesetzt sein}"
+      R2_ACCESS_KEY_ID: "${R2_ACCESS_KEY_ID:?R2_ACCESS_KEY_ID muss in .env gesetzt sein}"
+      R2_SECRET_ACCESS_KEY: "${R2_SECRET_ACCESS_KEY:?R2_SECRET_ACCESS_KEY muss in .env gesetzt sein}"
+      R2_BUCKET_NAME: "${R2_BUCKET_NAME:?R2_BUCKET_NAME muss in .env gesetzt sein}"
     ports:
       - "3000:3000"
-    volumes:
-      - uploads:/app/uploads
 
 volumes:
   postgres_data:
-  uploads:

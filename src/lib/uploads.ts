@@ -1,9 +1,11 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
 
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_MIME_TYPES = new Set([
   "image/png",
@@ -16,6 +18,37 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
+
+let client: S3Client | undefined;
+
+function getClient(): S3Client {
+  if (client) return client;
+
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    throw new Error(
+      "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID und R2_SECRET_ACCESS_KEY müssen gesetzt sein.",
+    );
+  }
+
+  client = new S3Client({
+    region: "auto",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+  return client;
+}
+
+function getBucket(): string {
+  const bucket = process.env.R2_BUCKET_NAME;
+  if (!bucket) {
+    throw new Error("R2_BUCKET_NAME muss gesetzt sein.");
+  }
+  return bucket;
+}
 
 export type SavedUpload = {
   filename: string;
@@ -33,11 +66,17 @@ export async function saveUploadedFile(file: File): Promise<SavedUpload | null> 
     throw new Error("Dateityp wird nicht unterstützt.");
   }
 
-  await mkdir(UPLOAD_DIR, { recursive: true });
-
   const storageKey = `${randomUUID()}-${sanitizeFilename(file.name)}`;
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(UPLOAD_DIR, storageKey), buffer);
+
+  await getClient().send(
+    new PutObjectCommand({
+      Bucket: getBucket(),
+      Key: storageKey,
+      Body: buffer,
+      ContentType: file.type,
+    }),
+  );
 
   return {
     filename: file.name,
@@ -47,8 +86,18 @@ export async function saveUploadedFile(file: File): Promise<SavedUpload | null> 
   };
 }
 
-export function resolveUploadPath(storageKey: string): string {
-  return path.join(UPLOAD_DIR, storageKey);
+/** Streams an object's body for the attachments route handler. Throws if missing. */
+export async function getUploadedFile(storageKey: string) {
+  const result = await getClient().send(
+    new GetObjectCommand({ Bucket: getBucket(), Key: storageKey }),
+  );
+
+  if (!result.Body) {
+    throw new Error("Datei nicht gefunden.");
+  }
+
+  // Body is a web ReadableStream in the Next.js/Edge-compatible runtime.
+  return result.Body.transformToWebStream();
 }
 
 function sanitizeFilename(name: string): string {
