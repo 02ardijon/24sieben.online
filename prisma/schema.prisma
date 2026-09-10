@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  AGENT
+  ADMIN
+}
+
+enum OrderStatus {
+  ANGENOMMEN
+  IN_BEARBEITUNG
+  WARTET_AUF_KUNDE
+  ABGESCHLOSSEN
+  STORNIERT
+}
+
+enum TicketStatus {
+  OFFEN
+  IN_BEARBEITUNG
+  WARTET_AUF_KUNDE
+  GESCHLOSSEN
+}
+
+enum TicketPriority {
+  NIEDRIG
+  NORMAL
+  HOCH
+  DRINGEND
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String?
+  role          Role      @default(CUSTOMER)
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  orders         Order[]         @relation("CustomerOrders")
+  tickets        Ticket[]        @relation("CustomerTickets")
+  ticketMessages TicketMessage[]
+
+  assignedTickets Ticket[]     @relation("AssignedAgent")
+  orderEvents     OrderEvent[] @relation("OrderEventActor")
+
+  accounts    Account[]
+  sessions    Session[]
+  resetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  customerId  String
+  title       String
+  description String?
+  status      OrderStatus @default(ANGENOMMEN)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  customer    User         @relation("CustomerOrders", fields: [customerId], references: [id])
+  events      OrderEvent[]
+  attachments Attachment[]
+  tickets     Ticket[]
+
+  @@map("orders")
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  message   String
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor User? @relation("OrderEventActor", fields: [actorId], references: [id])
+
+  @@map("order_events")
+}
+
+model Ticket {
+  id           String         @id @default(cuid())
+  customerId   String
+  orderId      String?
+  title        String
+  description  String
+  status       TicketStatus   @default(OFFEN)
+  priority     TicketPriority @default(NORMAL)
+  assignedToId String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  customer    User            @relation("CustomerTickets", fields: [customerId], references: [id])
+  order       Order?          @relation(fields: [orderId], references: [id])
+  assignedTo  User?           @relation("AssignedAgent", fields: [assignedToId], references: [id])
+  messages    TicketMessage[]
+  attachments Attachment[]
+
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author      User         @relation(fields: [authorId], references: [id])
+  attachments Attachment[]
+
+  @@map("ticket_messages")
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  filename  String
+  url       String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+
+  orderId         String?
+  ticketId        String?
+  ticketMessageId String?
+
+  order         Order?         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ticket        Ticket?        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketMessage TicketMessage? @relation(fields: [ticketMessageId], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
+}
+
+model ContactRequest {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("contact_requests")
+}
