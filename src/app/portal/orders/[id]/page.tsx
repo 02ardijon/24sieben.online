@@ -69,7 +69,7 @@ export default async function OrderDetailPage({
             {order.attachments.map((attachment) => (
               <li key={attachment.id}>
                 <a
-                  href={attachment.url}
+                  href={`/api/attachments/${attachment.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-accent hover:text-accent-hover"
