@@ -9,11 +9,24 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link href="/admin" className="text-lg font-semibold tracking-tight text-foreground">
-            24<span className="text-accent">sieben</span>.online <span className="text-muted">/ Admin</span>
-          </Link>
+          <div className="flex items-center gap-6">
+            <Link href="/admin" className="text-lg font-semibold tracking-tight text-foreground">
+              24<span className="text-accent">sieben</span>.online <span className="text-muted">/ Admin</span>
+            </Link>
+            <nav className="hidden gap-4 text-sm text-muted md:flex">
+              <Link href="/admin/customers" className="hover:text-accent">
+                Kunden
+              </Link>
+              <Link href="/admin/orders" className="hover:text-accent">
+                Aufträge
+              </Link>
+              <Link href="/admin/tickets" className="hover:text-accent">
+                Tickets
+              </Link>
+            </nav>
+          </div>
           <div className="flex items-center gap-4 text-sm text-muted">
-            <span>{session.user.name ?? session.user.email}</span>
+            <span className="hidden sm:inline">{session.user.name ?? session.user.email}</span>
             <Link href="/portal" className="hover:text-accent">
               Kundenportal
             </Link>

@@ -6,6 +6,7 @@ import { ticketStatusMap, ticketPriorityMap } from "@/lib/status";
 import { Badge } from "@/components/ui/badge";
 import { TicketThread } from "@/components/tickets/ticket-thread";
 import { ReplyForm } from "@/components/tickets/reply-form";
+import { AttachmentList } from "@/components/attachment-list";
 
 export default async function TicketDetailPage({
   params,
@@ -55,20 +56,9 @@ export default async function TicketDetailPage({
         )}
         <p className="mt-3 whitespace-pre-wrap text-muted">{ticket.description}</p>
         {ticket.attachments.length > 0 && (
-          <ul className="mt-3 flex flex-col gap-1">
-            {ticket.attachments.map((attachment) => (
-              <li key={attachment.id}>
-                <a
-                  href={`/api/attachments/${attachment.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-accent hover:text-accent-hover"
-                >
-                  {attachment.filename}
-                </a>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3">
+            <AttachmentList attachments={ticket.attachments} />
+          </div>
         )}
       </div>
 

@@ -4,6 +4,8 @@ import { verifySession } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { orderStatusMap } from "@/lib/status";
 import { Badge } from "@/components/ui/badge";
+import { OrderTimeline } from "@/components/orders/order-timeline";
+import { AttachmentList } from "@/components/attachment-list";
 
 export default async function OrderDetailPage({
   params,
@@ -44,41 +46,17 @@ export default async function OrderDetailPage({
 
       <div>
         <h2 className="text-lg font-medium text-foreground">Verlauf</h2>
-        {order.events.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">Noch keine Einträge im Verlauf.</p>
-        ) : (
-          <ol className="mt-4 flex flex-col gap-4 border-l border-border pl-6">
-            {order.events.map((event) => (
-              <li key={event.id} className="relative">
-                <span className="absolute -left-[29px] top-1.5 h-2.5 w-2.5 rounded-full bg-accent" />
-                <p className="text-sm text-foreground">{event.message}</p>
-                <p className="mt-1 text-xs text-muted">
-                  {event.createdAt.toLocaleString("de-DE")}
-                  {event.actor?.name ? ` · ${event.actor.name}` : ""}
-                </p>
-              </li>
-            ))}
-          </ol>
-        )}
+        <div className="mt-4">
+          <OrderTimeline events={order.events} />
+        </div>
       </div>
 
       {order.attachments.length > 0 && (
         <div>
           <h2 className="text-lg font-medium text-foreground">Dateianhänge</h2>
-          <ul className="mt-3 flex flex-col gap-2">
-            {order.attachments.map((attachment) => (
-              <li key={attachment.id}>
-                <a
-                  href={`/api/attachments/${attachment.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-accent hover:text-accent-hover"
-                >
-                  {attachment.filename}
-                </a>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3">
+            <AttachmentList attachments={order.attachments} />
+          </div>
         </div>
       )}
     </div>
